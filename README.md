@@ -1,1 +1,1 @@
-# ExoWeb
+This project trains a machine learning model on NASA Kepler, K2, and TESS exoplanet datasets to classify data points as confirmed exoplanets, planetary candidates, or false positives. The model provides explainable predictions using SHAP values and allows scientists to interactively adjust criteria through a web interface. Feedback from users can be used to fine-tune the model, enabling a continuous learning loop.
