@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ExoML - Explainable Exoplanet ML Tool</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="header">
+            <h1>ExoML - Explainable Exoplanet ML Tool</h1>
+            <div class="header-controls">
+                <div class="data-navigation">
+                    <button id="prev-sample" class="nav-btn">←</button>
+                    <div class="sample-info">
+                        <span class="sample-id">Sample: K00752.01</span>
+                        <span class="sample-name">Kepler-227 b</span>
+                    </div>
+                    <button id="next-sample" class="nav-btn">→</button>
+                </div>
+                <div class="mode-toggle">
+                    <button id="test-mode" class="mode-btn">Test Mode</button>
+                    <button id="expert-mode" class="mode-btn active">Expert Mode</button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Feature Panel (Left) -->
+            <div class="feature-panel">
+                <h2>Classification Criteria</h2>
+                <div class="criteria-container">
+                    <!-- Transit Signal Reliability -->
+                    <div class="criterion-item" data-criterion="transit-signal">
+                        <div class="criterion-header">
+                            <label>Transit Signal Reliability</label>
+                            <span class="criterion-value">85%</span>
+                        </div>
+                        <div class="slider-container">
+                            <input type="range" class="criterion-slider" min="0" max="100" value="85" 
+                                   data-criterion="transit-signal">
+                            <div class="slider-labels">
+                                <span>Poor</span>
+                                <span>Excellent</span>
+                            </div>
+                        </div>
+                        <div class="criterion-explanation">
+                            <p>How clean, periodic, and U-shaped the transit signal is. Model considers depth, duration, period, and SNR.</p>
+                        </div>
+                    </div>
+
+                    <!-- False Positive Likelihood -->
+                    <div class="criterion-item" data-criterion="false-positive">
+                        <div class="criterion-header">
+                            <label>False Positive Likelihood</label>
+                            <span class="criterion-value">25%</span>
+                        </div>
+                        <div class="slider-container">
+                            <input type="range" class="criterion-slider" min="0" max="100" value="25" 
+                                   data-criterion="false-positive">
+                            <div class="slider-labels">
+                                <span>Low Risk</span>
+                                <span>High Risk</span>
+                            </div>
+                        </div>
+                        <div class="criterion-explanation">
+                            <p>Chance that the signal is due to a binary star, crowding, or noise. Model uses false positive flags.</p>
+                        </div>
+                    </div>
+
+                    <!-- Planetary Plausibility -->
+                    <div class="criterion-item" data-criterion="planetary-plausibility">
+                        <div class="criterion-header">
+                            <label>Planetary Plausibility</label>
+                            <span class="criterion-value">92%</span>
+                        </div>
+                        <div class="slider-container">
+                            <input type="range" class="criterion-slider" min="0" max="100" value="92" 
+                                   data-criterion="planetary-plausibility">
+                            <div class="slider-labels">
+                                <span>Unlikely</span>
+                                <span>Very Likely</span>
+                            </div>
+                        </div>
+                        <div class="criterion-explanation">
+                            <p>Does the inferred planet size make sense? Model compares transit depth to stellar radius.</p>
+                        </div>
+                    </div>
+
+                    <!-- Orbit Plausibility -->
+                    <div class="criterion-item" data-criterion="orbit-plausibility">
+                        <div class="criterion-header">
+                            <label>Orbit Plausibility</label>
+                            <span class="criterion-value">78%</span>
+                        </div>
+                        <div class="slider-container">
+                            <input type="range" class="criterion-slider" min="0" max="100" value="78" 
+                                   data-criterion="orbit-plausibility">
+                            <div class="slider-labels">
+                                <span>Unrealistic</span>
+                                <span>Realistic</span>
+                            </div>
+                        </div>
+                        <div class="criterion-explanation">
+                            <p>Is the orbital geometry realistic? Model uses impact parameter, period, and transit duration.</p>
+                        </div>
+                    </div>
+
+                    <!-- Temperature / Habitability Check -->
+                    <div class="criterion-item" data-criterion="temperature-habitability">
+                        <div class="criterion-header">
+                            <label>Temperature / Habitability</label>
+                            <span class="criterion-value">65%</span>
+                        </div>
+                        <div class="slider-container">
+                            <input type="range" class="criterion-slider" min="0" max="100" value="65" 
+                                   data-criterion="temperature-habitability">
+                            <div class="slider-labels">
+                                <span>Too Hot/Cold</span>
+                                <span>Habitable</span>
+                            </div>
+                        </div>
+                        <div class="criterion-explanation">
+                            <p>Is equilibrium temperature plausible for the planet? Model uses insolation flux and stellar temperature.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel-controls">
+                    <button id="reset-sliders" class="control-btn">Reset to Model</button>
+                    <button id="submit-corrections" class="control-btn primary">Submit Corrections</button>
+                </div>
+            </div>
+
+            <!-- Visualization Panel (Center) -->
+            <div class="visualization-panel">
+                <div class="visualization-tabs">
+                    <button class="tab-btn active" data-tab="transit-signal">Transit Signal Analysis</button>
+                    <button class="tab-btn" data-tab="false-positive">False Positive Tests</button>
+                    <button class="tab-btn" data-tab="planetary-plausibility">Planetary Analysis</button>
+                    <button class="tab-btn" data-tab="orbit-plausibility">Orbital Analysis</button>
+                    <button class="tab-btn" data-tab="temperature-habitability">Temperature Analysis</button>
+                </div>
+
+                <!-- Transit Signal Analysis Tab -->
+                <div class="tab-content active" id="transit-signal">
+                    <div class="diagnostic-section">
+                        <h3>Signal-to-Noise Ratio Analysis</h3>
+                        <div class="chart-container">
+                            <canvas id="snrAnalysisChart"></canvas>
+                        </div>
+                        <div class="diagnostic-metrics">
+                            <div class="metric-grid">
+                                <div class="metric-item">
+                                    <span class="metric-label">SNR:</span>
+                                    <span class="metric-value" id="snr-value">15.2</span>
+                                    <span class="metric-threshold">Threshold: >7.1</span>
+                                </div>
+                                <div class="metric-item">
+                                    <span class="metric-label">Transit Depth:</span>
+                                    <span class="metric-value" id="depth-value">0.62%</span>
+                                    <span class="metric-threshold">Range: 0.1-10%</span>
+                                </div>
+                                <div class="metric-item">
+                                    <span class="metric-label">Detection Confidence:</span>
+                                    <span class="metric-value" id="detection-confidence">Very High</span>
+                                    <span class="metric-threshold">High/Very High</span>
+                                </div>
+                                <div class="metric-item">
+                                    <span class="metric-label">Noise Level:</span>
+                                    <span class="metric-value" id="noise-level">Low</span>
+                                    <span class="metric-threshold">Low/Medium/High</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="explanation-box">
+                            <h4>Why 95% Transit Signal Reliability?</h4>
+                            <p><strong>SNR Analysis:</strong> Signal-to-noise ratio of 15.2 exceeds the 7.1 threshold for reliable detection. This means the transit signal is 15.2 times stronger than the noise level, indicating a very robust detection.</p>
+                            <p><strong>Depth Analysis:</strong> Transit depth of 0.62% is within the typical range for planetary transits (0.1-10%), consistent with a planet-sized object blocking starlight.</p>
+                            <p><strong>Detection Threshold:</strong> The SNR of 15.2 places this detection well above the 7.1σ threshold used by Kepler for reliable planet candidates, reducing false positive probability.</p>
+                            <p><strong>Noise Assessment:</strong> Low noise level indicates clean photometry with minimal instrumental artifacts or stellar variability contamination.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- False Positive Tests Tab -->
+                <div class="tab-content" id="false-positive">
+                    <div class="diagnostic-section">
+                        <h3>Kepler False Positive Flag Analysis</h3>
+                        <div class="chart-container">
+                            <canvas id="fpFlagsChart"></canvas>
+                        </div>
+                        <div class="diagnostic-metrics">
+                            <div class="metric-grid">
+                                <div class="metric-item">
+                                    <span class="metric-label">Binary Star Flag:</span>
+                                    <span class="metric-value" id="binary-flag">0</span>
+                                    <span class="metric-threshold">0 = No binary</span>
+                                </div>
+                                <div class="metric-item">
+                                    <span class="metric-label">Stellar Eclipse Flag:</span>
+                                    <span class="metric-value" id="stellar-flag">0</span>
+                                    <span class="metric-threshold">0 = No stellar eclipse</span>
+                                </div>
+                                <div class="metric-item">
+                                    <span class="metric-label">Crowding Flag:</span>
+                                    <span class="metric-value" id="crowding-flag">0</span>
+                                    <span class="metric-threshold">0 = No crowding</span>
+                                </div>
+                                <div class="metric-item">
+                                    <span class="metric-label">Eclipsing Binary Flag:</span>
+                                    <span class="metric-value" id="eclipse-flag">0</span>
+                                    <span class="metric-threshold">0 = No eclipsing binary</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="explanation-box">
+                            <h4>Why 5% False Positive Risk?</h4>
+                            <p><strong>Kepler FP Flags:</strong> All false positive flags are 0, indicating no detected stellar eclipses, binary stars, crowding, or instrumental artifacts.</p>
+                            <p><strong>Binary Star Check:</strong> Flag=0 means no evidence of a binary star system that could mimic planetary transits.</p>
+                            <p><strong>Stellar Eclipse Check:</strong> Flag=0 indicates no stellar eclipses detected that could create false transit signals.</p>
+                            <p><strong>Crowding Analysis:</strong> Flag=0 shows no significant stellar crowding that could contaminate the light curve.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Planetary Plausibility Tab -->
+                <div class="tab-content" id="planetary-plausibility">
+                    <div class="diagnostic-section">
+                        <h3>Planetary Radius-Period Population Analysis</h3>
+                        <div class="chart-container">
+                            <canvas id="radiusPeriodChart"></canvas>
+                        </div>
+                        <div class="diagnostic-metrics">
+                            <div class="metric-grid">
+                                <div class="metric-item">
+                                    <span class="metric-label">Planet Radius:</span>
+                                    <span class="metric-value" id="planet-radius">2.26 R⊕</span>
+                                    <span class="metric-threshold">Range: 0.5-20 R⊕</span>
+                                </div>
+                                <div class="metric-item">
+                                    <span class="metric-label">Density Estimate:</span>
+                                    <span class="metric-value" id="density">5.5 g/cm³</span>
+                                    <span class="metric-threshold">Rocky: >3 g/cm³</span>
+                                </div>
+                                <div class="metric-item">
+                                    <span class="metric-label">Mass Range:</span>
+                                    <span class="metric-value" id="mass-range">0.8-2.1 M⊕</span>
+                                    <span class="metric-threshold">Terrestrial</span>
+                                </div>
+                                <div class="metric-item">
+                                    <span class="metric-label">Population Percentile:</span>
+                                    <span class="metric-value" id="population-percentile">85th</span>
+                                    <span class="metric-threshold">vs Known Planets</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="explanation-box">
+                            <h4>Why 98% Planetary Plausibility?</h4>
+                            <p><strong>Radius Analysis:</strong> At 2.26 Earth radii, this planet falls in the "super-Earth" category, consistent with known exoplanet populations and well within the 0.5-20 R⊕ range for planets.</p>
+                            <p><strong>Density Calculation:</strong> Using mass-radius relationships, estimated density of 5.5 g/cm³ indicates a rocky composition (similar to Earth's 5.5 g/cm³), ruling out gas giants.</p>
+                            <p><strong>Population Comparison:</strong> This planet falls in the 85th percentile of known exoplanet radius distribution, indicating it's a typical super-Earth rather than an outlier.</p>
+                            <p><strong>Physical Constraints:</strong> The inferred mass (0.8-2.1 M⊕) is physically reasonable for a rocky planet of this size, consistent with planetary formation models.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Orbital Analysis Tab -->
+                <div class="tab-content" id="orbit-plausibility">
+                    <div class="diagnostic-section">
+                        <h3>Impact Parameter vs Transit Duration Analysis</h3>
+                        <div class="chart-container">
+                            <canvas id="orbitalChart"></canvas>
+                        </div>
+                        <div class="diagnostic-metrics">
+                            <div class="metric-grid">
+                                <div class="metric-item">
+                                    <span class="metric-label">Impact Parameter:</span>
+                                    <span class="metric-value" id="impact-param">0.146</span>
+                                    <span class="metric-threshold">Range: 0-1</span>
+                                </div>
+                                <div class="metric-item">
+                                    <span class="metric-label">Inclination:</span>
+                                    <span class="metric-value" id="inclination">89.2°</span>
+                                    <span class="metric-threshold">Near edge-on</span>
+                                </div>
+                                <div class="metric-item">
+                                    <span class="metric-label">Transit Duration:</span>
+                                    <span class="metric-value" id="transit-duration">2.96 hrs</span>
+                                    <span class="metric-threshold">Consistent</span>
+                                </div>
+                                <div class="metric-item">
+                                    <span class="metric-label">Geometric Probability:</span>
+                                    <span class="metric-value" id="geo-probability">2.1%</span>
+                                    <span class="metric-threshold">Transit probability</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="explanation-box">
+                            <h4>Why 92% Orbital Plausibility?</h4>
+                            <p><strong>Impact Parameter:</strong> At 0.146, the planet transits near the center of the star, creating a symmetric light curve typical of planetary transits rather than grazing eclipses.</p>
+                            <p><strong>Inclination Analysis:</strong> The orbital inclination of 89.2° is nearly edge-on, explaining why we can observe transits. This is consistent with planetary systems.</p>
+                            <p><strong>Duration Consistency:</strong> Transit duration of 2.96 hours is consistent with the orbital period and stellar radius, following Kepler's laws for planetary orbits.</p>
+                            <p><strong>Geometric Probability:</strong> The 2.1% transit probability is reasonable for this orbital configuration, indicating a typical planetary system geometry.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Temperature Analysis Tab -->
+                <div class="tab-content" id="temperature-habitability">
+                    <div class="diagnostic-section">
+                        <h3>Insolation Flux vs Equilibrium Temperature Analysis</h3>
+                        <div class="chart-container">
+                            <canvas id="temperatureChart"></canvas>
+                        </div>
+                        <div class="diagnostic-metrics">
+                            <div class="metric-grid">
+                                <div class="metric-item">
+                                    <span class="metric-label">Equilibrium Temp:</span>
+                                    <span class="metric-value" id="eq-temp">793K</span>
+                                    <span class="metric-threshold">Range: 100-2000K</span>
+                                </div>
+                                <div class="metric-item">
+                                    <span class="metric-label">Insolation Flux:</span>
+                                    <span class="metric-value" id="insolation">35.8 S⊕</span>
+                                    <span class="metric-threshold">Habitable: 0.5-2 S⊕</span>
+                                </div>
+                                <div class="metric-item">
+                                    <span class="metric-label">Habitable Zone:</span>
+                                    <span class="metric-value" id="hz-status">Outside</span>
+                                    <span class="metric-threshold">Inside/Edge/Outside</span>
+                                </div>
+                                <div class="metric-item">
+                                    <span class="metric-label">Climate Zone:</span>
+                                    <span class="metric-value" id="climate-zone">Hot Desert</span>
+                                    <span class="metric-threshold">Cold/Temperate/Hot</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="explanation-box">
+                            <h4>Why 45% Temperature/Habitability Score?</h4>
+                            <p><strong>Temperature Analysis:</strong> At 793K, this planet is too hot for liquid water and life as we know it. The equilibrium temperature is calculated from stellar temperature and orbital distance.</p>
+                            <p><strong>Insolation Flux:</strong> Receiving 35.8 times Earth's solar flux, this planet is in the "hot" category, similar to Venus but even hotter.</p>
+                            <p><strong>Habitable Zone:</strong> The planet orbits well inside the habitable zone of its star, making it too hot for surface liquid water or Earth-like life.</p>
+                            <p><strong>Climate Classification:</strong> This planet falls in the "Hot Desert" climate zone, with surface temperatures too high for most known life forms.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Prediction & Feedback Panel (Right) -->
+            <div class="prediction-panel">
+                <h2>Prediction & Feedback</h2>
+                
+                <!-- Disposition -->
+                <div class="disposition-section">
+                    <h3>Predicted Disposition</h3>
+                    <div class="disposition-display">
+                        <span class="disposition-label candidate">CANDIDATE</span>
+                        <div class="confidence-bar">
+                            <div class="confidence-fill" style="width: 78%"></div>
+                            <span class="confidence-text">78% Confidence</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Feature Contributions -->
+                <div class="contributions-section">
+                    <h3>Feature Contributions</h3>
+                    <div class="contribution-bars">
+                        <div class="contribution-item">
+                            <span class="contribution-label">Transit Signal</span>
+                            <div class="contribution-bar">
+                                <div class="contribution-fill positive" style="width: 85%"></div>
+                                <span class="contribution-percentage">85%</span>
+                            </div>
+                        </div>
+                        <div class="contribution-item">
+                            <span class="contribution-label">False Positive</span>
+                            <div class="contribution-bar">
+                                <div class="contribution-fill negative" style="width: 25%"></div>
+                                <span class="contribution-percentage">25%</span>
+                            </div>
+                        </div>
+                        <div class="contribution-item">
+                            <span class="contribution-label">Planet Plausibility</span>
+                            <div class="contribution-bar">
+                                <div class="contribution-fill positive" style="width: 92%"></div>
+                                <span class="contribution-percentage">92%</span>
+                            </div>
+                        </div>
+                        <div class="contribution-item">
+                            <span class="contribution-label">Orbit Plausibility</span>
+                            <div class="contribution-bar">
+                                <div class="contribution-fill positive" style="width: 78%"></div>
+                                <span class="contribution-percentage">78%</span>
+                            </div>
+                        </div>
+                        <div class="contribution-item">
+                            <span class="contribution-label">Temperature</span>
+                            <div class="contribution-bar">
+                                <div class="contribution-fill neutral" style="width: 65%"></div>
+                                <span class="contribution-percentage">65%</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Scientist Correction Interface -->
+                <div class="correction-section">
+                    <h3>Scientist Corrections</h3>
+                    <div class="correction-controls">
+                        <div class="correction-note">
+                            <label for="correction-notes">Notes:</label>
+                            <textarea id="correction-notes" placeholder="Add your reasoning for corrections..."></textarea>
+                        </div>
+                        <div class="correction-buttons">
+                            <button id="save-candidate" class="action-btn secondary">Save Candidate</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Export Options -->
+                <div class="export-section">
+                    <h3>Export</h3>
+                    <div class="export-buttons">
+                        <button id="export-data" class="export-btn">Export Data</button>
+                        <button id="export-visualization" class="export-btn">Export Visualization</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tooltip -->
+    <div id="tooltip" class="tooltip"></div>
+
+    <script src="script.js"></script>
+</body>
+</html>
